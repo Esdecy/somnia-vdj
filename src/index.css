@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "EB Garamond", Georgia, serif;
+  
+  --color-surface-variant: #313348;
+  --color-surface-tint: #cac2e1;
+  --color-secondary: #ecb2ff;
+  --color-surface-container: #1c1e32;
+  --color-on-primary: #322d45;
+  --color-primary-container: #0f0b21;
+  --color-on-tertiary-fixed-variant: #004f54;
+  --color-tertiary: #00dbe9;
+  --color-inverse-primary: #605b75;
+  --color-surface-container-high: #27283c;
+  --color-tertiary-fixed-dim: #00dbe9;
+  --color-on-tertiary-fixed: #002022;
+  --color-outline-variant: #48464d;
+  --color-primary: #cac2e1;
+  --color-secondary-fixed-dim: #ecb2ff;
+  --color-on-background: #e0e0fb;
+  --color-surface-bright: #36384c;
+  --color-on-primary-fixed-variant: #48435c;
+  --color-error-container: #93000a;
+  --color-surface-container-lowest: #0b0d1f;
+  --color-outline: #938f97;
+  --color-inverse-surface: #e0e0fb;
+  --color-on-primary-container: #7e7893;
+  --color-tertiary-fixed: #7df4ff;
+  --color-background: #101225;
+  --color-inverse-on-surface: #2d2f43;
+  --color-on-surface-variant: #c9c5cd;
+  --color-on-secondary-fixed: #320047;
+  --color-tertiary-container: #001113;
+  --color-on-tertiary-container: #008992;
+  --color-on-error-container: #ffdad6;
+  --color-surface-container-low: #181a2d;
+  --color-surface-dim: #101225;
+  --color-on-surface: #e0e0fb;
+  --color-on-error: #690005;
+  --color-on-primary-fixed: #1c182f;
+  --color-on-tertiary: #00363a;
+  --color-primary-fixed-dim: #cac2e1;
+  --color-surface: #101225;
+  --color-secondary-fixed: #f8d8ff;
+  --color-secondary-container: #cf5cff;
+  --color-surface-container-highest: #313348;
+  --color-error: #ffb4ab;
+  --color-primary-fixed: #e6defe;
+  --color-on-secondary: #520071;
+  --color-on-secondary-container: #480063;
+  --color-on-secondary-fixed-variant: #74009f;
+}
+
+body {
+  background-color: #101225;
+  color: #e0e0fb;
+  /* Starry twilight background */
+  background-image: 
+      radial-gradient(circle at 15% 50%, rgba(207, 92, 255, 0.04), transparent 28%),
+      radial-gradient(circle at 85% 30%, rgba(0, 219, 233, 0.04), transparent 28%);
+  background-attachment: fixed;
+  font-family: var(--font-sans);
+}
+
+/* Typography styles matching font-headings */
+h1, h2, .font-headline-lg-mobile {
+  font-family: var(--font-serif);
+}
+
+/* Glassmorphism containers rim lighting */
+.glass-panel {
+  background: rgba(28, 30, 50, 0.45);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-top: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+}
+
+.glass-input {
+  background: rgba(49, 51, 72, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(202, 194, 225, 0.12);
+  color: #e0e0fb;
+}
+
+.glass-input:focus {
+  border-color: #00dbe9;
+  box-shadow: 0 0 16px rgba(0, 219, 233, 0.2);
+  outline: none;
+}
+
+/* Custom chips styling profiles */
+.chip {
+  background: rgba(28, 30, 50, 0.8);
+  border: 1px solid rgba(202, 194, 225, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.chip-nightmare {
+  border-color: rgba(255, 180, 171, 0.35) !important;
+}
+
+.chip-lucid {
+  border-color: rgba(0, 219, 233, 0.35) !important;
+}
+
+.chip-recurring {
+  border-color: rgba(236, 178, 255, 0.35) !important;
+}
+
+/* Laser scan animation keyframes */
+@keyframes scan {
+  0% { top: -20%; opacity: 0; }
+  12% { opacity: 0.9; }
+  88% { opacity: 0.9; }
+  100% { top: 120%; opacity: 0; }
+}
+
+/* General high contrast text-shadow neon pulse */
+.neon-glow-text {
+  text-shadow: 0 0 12px rgba(236, 178, 255, 0.35), 0 0 4px rgba(0, 219, 233, 0.2);
+}
+
+/* Hide native browser scrollbars where desired */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom horizontal scroll for timeline clips */
+.timeline-track-bg {
+  background-image: repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.015),
+      rgba(255, 255, 255, 0.015) 1px,
+      transparent 1px,
+      transparent 50px
+  );
+}

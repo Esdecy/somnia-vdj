@@ -1,0 +1,6 @@
+{
+  "name": "Somnia",
+  "description": "Visual dream journal with speech transcripts, details extraction bento grid, and a multi-track editor timeline suite powered by server-side Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
