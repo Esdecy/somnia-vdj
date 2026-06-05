@@ -33,6 +33,7 @@ export interface DreamVisuals {
   style: string; // Synthwave, Ghibli, Noir, Hyper-real
   refinePrompt: string;
   videoSequence: string;
+  renderMode?: "video" | "still";
 }
 
 export interface Dream {

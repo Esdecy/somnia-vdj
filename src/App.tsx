@@ -39,6 +39,9 @@ export default function App() {
     emotion: "Awe",
     location: "Unknown Realm",
     characters: "Unfamiliar guides",
+    date: new Date().toISOString().split("T")[0],
+    renderMode: "video" as "video" | "still",
+    style: "Synthwave",
   });
 
   // Preload initial dreams from storage
@@ -64,7 +67,14 @@ export default function App() {
   // Submit recorded or typed dream to progress toward Subconscious extraction
   const handleDreamSubmit = async (
     text: string,
-    tags: { emotion: string; location: string; characters: string }
+    tags: {
+      emotion: string;
+      location: string;
+      characters: string;
+      date: string;
+      renderMode: "video" | "still";
+      style: string;
+    }
   ) => {
     setDraftText(text);
     setExtractedDetails(tags);
@@ -90,9 +100,10 @@ export default function App() {
           duration: Math.max(15, Math.min(60, Math.floor(draftText.length / 5))),
           visuals: {
             imageUrl: "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80&w=800",
-            style: item.style || "Synthwave",
+            style: extractedDetails.style || item.style || "Synthwave",
             refinePrompt: item.refinePrompt || draftText,
             videoSequence: `Sequence ${Math.floor(Math.random() * 15 + 1).toString().padStart(2, '0')}_C`,
+            renderMode: extractedDetails.renderMode,
           },
           details: {
             entities: item.characters ? [item.characters] : [extractedDetails.characters],
@@ -131,14 +142,33 @@ export default function App() {
         spatialContext: extractedDetails.location,
         entities: [extractedDetails.characters],
       };
+      dreamConfig.visuals = {
+        imageUrl: dreamConfig.visuals?.imageUrl || "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80&w=800",
+        style: extractedDetails.style || "Synthwave",
+        refinePrompt: draftText,
+        videoSequence: `Sequence 01_C`,
+        renderMode: extractedDetails.renderMode,
+      };
+    }
+
+    // Format custom historical date selectively to allow backdating
+    let customDateString = "";
+    let customTimestamp = "";
+    try {
+      const parsedDate = new Date(extractedDetails.date + "T12:00:00");
+      customDateString = parsedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      customTimestamp = parsedDate.toISOString();
+    } catch {
+      customDateString = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      customTimestamp = new Date().toISOString();
     }
 
     // Append standard parameters
     const newDream: Dream = {
       id: `dream-${Date.now()}`,
       title: dreamConfig.title || "The Shadow Mirage",
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      timestamp: new Date().toISOString(),
+      date: customDateString,
+      timestamp: customTimestamp,
       text: draftText,
       duration: dreamConfig.duration || 35,
       visuals: dreamConfig.visuals!,
@@ -146,7 +176,8 @@ export default function App() {
       tracks: dreamConfig.tracks!,
     };
 
-    const updated = [newDream, ...dreams];
+    // Sort chronologically descending so old dreams slide perfectly into their correct place!
+    const updated = [newDream, ...dreams].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
     persistDreams(updated);
     setSelectedDream(newDream);
     setViewState("editor");

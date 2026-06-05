@@ -8,7 +8,17 @@ import { Mic, MicOff, PenTool, Sparkles, Send, Keyboard, HelpCircle } from "luci
 import { motion, AnimatePresence } from "motion/react";
 
 interface RecordViewProps {
-  onDreamSubmit: (text: string, tags: { emotion: string; location: string; characters: string }) => void;
+  onDreamSubmit: (
+    text: string,
+    tags: {
+      emotion: string;
+      location: string;
+      characters: string;
+      date: string;
+      renderMode: "video" | "still";
+      style: string;
+    }
+  ) => void;
 }
 
 export default function RecordView({ onDreamSubmit }: RecordViewProps) {
@@ -21,6 +31,9 @@ export default function RecordView({ onDreamSubmit }: RecordViewProps) {
   const [emotion, setEmotion] = useState("Awe");
   const [location, setLocation] = useState("Unknown Realm");
   const [characters, setCharacters] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [renderMode, setRenderMode] = useState<"video" | "still">("video");
+  const [style, setStyle] = useState("Synthwave");
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -71,6 +84,9 @@ export default function RecordView({ onDreamSubmit }: RecordViewProps) {
       emotion,
       location: location || "Unknown Realm",
       characters: characters || "Unfamiliar guides",
+      date,
+      renderMode,
+      style,
     });
   };
 
@@ -268,6 +284,88 @@ export default function RecordView({ onDreamSubmit }: RecordViewProps) {
                   placeholder="Characters (e.g. Talking mirror reflection, hooded figures)"
                   className="w-full bg-black/20 border border-white/10 rounded-full px-4 py-2.5 text-xs text-on-surface focus:border-tertiary outline-none"
                 />
+              </div>
+
+              {/* Upload Old Dreams Date Picker & Render Format Selectors */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-white/5 pt-4 mt-2">
+                
+                {/* Historical Date Backing (Upload Old Dreams) */}
+                <div className="flex flex-col gap-1.5 text-left">
+                  <span className="font-label-caps text-[10px] tracking-wide text-on-surface-variant">Reverie Date (Upload Old Dreams)</span>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    max={new Date().toISOString().split("T")[0]}
+                    className="w-full bg-black/25 border border-white/15 rounded-xl px-4 py-2 text-xs text-[#00dbe9] focus:border-tertiary outline-none"
+                  />
+                  <p className="text-[10px] text-on-surface-variant/60">
+                    Choose any past date to record and backdate an old dream.
+                  </p>
+                </div>
+
+                {/* Synthesis Format Toggle: Video Loop vs Still Frame */}
+                <div className="flex flex-col gap-1.5 text-left">
+                  <span className="font-label-caps text-[10px] tracking-wide text-on-surface-variant">Synthesis Mode</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setRenderMode("video")}
+                      className={`py-2 px-3 rounded-xl text-center text-[10px] font-semibold tracking-wide border transition-all ${
+                        renderMode === "video"
+                          ? "bg-secondary/15 border-secondary text-secondary font-bold shadow-[0_0_10px_rgba(236,178,255,0.15)]"
+                          : "bg-surface-container/20 border-white/5 text-on-surface-variant hover:text-white"
+                      }`}
+                    >
+                      Video Loop
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRenderMode("still")}
+                      className={`py-2 px-3 rounded-xl text-center text-[10px] font-semibold tracking-wide border transition-all ${
+                        renderMode === "still"
+                          ? "bg-tertiary/15 border-tertiary text-tertiary font-bold shadow-[0_0_10px_rgba(0,219,233,0.15)]"
+                          : "bg-surface-container/20 border-white/5 text-on-surface-variant hover:text-white"
+                      }`}
+                    >
+                      Still Frame
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant/60">
+                    {renderMode === "video" ? "Generates 3-4s motion dream sequence." : "Generates a budget-friendly high-res still image."}
+                  </p>
+                </div>
+
+              </div>
+
+              {/* Extended Cinematic Style Preset Selector */}
+              <div className="flex flex-col gap-1.5 border-t border-white/5 pt-4 text-left">
+                <span className="font-label-caps text-[10px] tracking-wide text-on-surface-variant">Cinematic Dream Art Style (Not all Cartoonish)</span>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                  {[
+                    { id: "Synthwave", label: "Synthwave" },
+                    { id: "Ghibli", label: "Anime/Ghibli" },
+                    { id: "Noir", label: "Noir (Mono)" },
+                    { id: "Hyper-real", label: "Hyper-real" },
+                    { id: "Oil Painting", label: "Oil Painting" },
+                    { id: "Cinematic", label: "3D Cinematic" },
+                    { id: "Surrealism", label: "Surreal Collage" },
+                    { id: "Cyberpunk", label: "Cyberpunk" },
+                  ].map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setStyle(preset.id)}
+                      className={`py-1.5 px-2 rounded-lg text-center text-[10px] font-semibold border transition-all ${
+                        style === preset.id
+                          ? "bg-secondary/15 border-secondary text-secondary font-bold"
+                          : "bg-surface-container/20 border-white/5 text-on-surface-variant hover:text-white"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Synthesize Submit Trigger */}
