@@ -101,6 +101,40 @@ Dream description: "${text}"`,
   }
 });
 
+// REST Endpoint: Empathetic psychological dream interpretation & symbol query
+app.post("/api/interpret-dream", async (req, res) => {
+  const { text, question } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: "No dream description provided to analyze." });
+  }
+
+  const promptText = question 
+    ? `The user is asking a specific question: "${question}" regarding their recorded dream.
+Dream text: "${text}"
+Please provide a grounded, psychological and emotional answer.` 
+    : `Given the dream description: "${text}"
+Please write a psychological and emotional dream interpretation. Map out potential waking life correlations (such as stressors, active routine/life changes, or subconscious symbols). Identify 2 key metaphors/objects and what emotional state they might reflect.`;
+
+  try {
+    const ai = getGenAIClient();
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: promptText,
+      config: {
+        systemInstruction: "You are Somnia's intuitive, empathetic dream psychologist and guide. Speak directly to the dreamer in a warm, grounded, and supportive tone. Avoid clinical-sounding jargon, medical diagnosis assertions, and predictive 'woo-woo' supernatural assumptions. Focus on self-reflection, mindfulness, emotional processing, and waking life correlations (like how sleep environment or stress shapes REM dreams). Answer in 2 to 3 concise, highly readable, well-spaced paragraphs.",
+      }
+    });
+
+    return res.json({ status: "success", interpretation: response.text });
+  } catch (error: any) {
+    console.warn("Gemini Dream Interpretation fell back or failed:", error.message);
+    return res.json({
+      status: "fallback",
+      interpretation: "To understand this reverie, consider what emotional spikes you faced during the day. Often, recurring motifs represent active cognitive tasks or stressors your mind is reorganizing. Try comparing your Home Bed recall vs outer sleep environments, as environmental stability directly shapes REM dream intensity."
+    });
+  }
+});
+
 // REST Endpoint: Draw dream illustration using Gemini Flash Image generator
 app.post("/api/generate-image", async (req, res) => {
   const { prompt, style } = req.body;

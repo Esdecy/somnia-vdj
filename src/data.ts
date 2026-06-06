@@ -13,6 +13,8 @@ export const PRESET_DREAMS: Dream[] = [
     timestamp: "2026-10-24T07:15:00Z",
     text: "I was flying over an endless city made entirely of blue glass. Every reflection showed a different timeline. I realized I was dreaming when the reflections started talking to me and guiding me back home.",
     duration: 45,
+    lifeEpoch: "Career Transition",
+    sleepEnvironment: "Home Bed",
     visuals: {
       imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuC6sjKvVC98V3nb-5XvqVEXxt7SORK-byhoqYXfOxvI5WP7L-VYuHCpYYFfMGiuOAtAjpSdHwx1E1n3XQXFQ75tFlR0qrZ-fq6u_MZgjAS7OKjrAUqPN7B1mDgDxienq43M7HczDQc-YC_bQORhKsnyQuMdhmcd-zx542g19Z6Flfk-Pxg-xRAYCOYnKcKJMzR1LhUhak8_d-PtyQrIodIYOvTb4zEucA-GrjrLIAKZd3eRkXugm1bJh_lBw1SSzVif6PLlThpbgqyN",
       style: "Synthwave",
@@ -53,6 +55,8 @@ export const PRESET_DREAMS: Dream[] = [
     timestamp: "2026-10-22T04:10:00Z",
     text: "The same corridor again. The walls breathe and the lights flicker in a rhythmic pattern. I keep walking towards the red door but the distance never changes. A feeling of heavy dread weighs down my limbs.",
     duration: 30,
+    lifeEpoch: "Career Transition",
+    sleepEnvironment: "Nap Context",
     visuals: {
       imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuA57QnaT4HiLo0_8zkmSXCNobEikRG_2ROGdysjuBoXptOyu6CcIN-T3OPjhEk8PLkloaNzNySkXXBILJ1qAYW6AlRzJLNXhb77vffINQc2MKRSGDh7V-RbOnsMzMSd8r35_WJhfdyVaB4XMau65M44iSOi13iZGrAubCDHx_yFOMSx7qlWzim4N_hvE8dS9mX9xQ_1i7SpyDyGb2JVGHB8JupbXBV3UNM08iyMtJs9zIV2nCBcWnQjmLoQiEQFWIuqIe6Qv9c9_Ug2",
       style: "Noir",
@@ -90,6 +94,8 @@ export const PRESET_DREAMS: Dream[] = [
     timestamp: "2026-10-19T06:30:00Z",
     text: "I was wandering inside a mysterious bioluminescent neon city, and then massive translucent glowing jellyfish started floating down among the skyscrapers. I felt a tremendous sense of awe.",
     duration: 45,
+    lifeEpoch: "Ordinary Life",
+    sleepEnvironment: "Traveling/Hotel Context",
     visuals: {
       imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBTGFbkKpHWJrTVjhSqBWQMlUjswOSaHuAC3KCkcdKEVytH2kAzh6Fp7_XfVDFsf-xQT4v9ezmQO8tkDmQ3vwsqWMyMk4KOPiqP9jQGPMX7VAdb4yi0ix-3RbVnX0QnFIxSMQ9MMV14vpB36kHsE2cAyZQlw-XgfprNoxxVw4xaFgir1qNTlPGxvfoUD2kgcMhQIDpPdWyZUZUBsCVUQGKFuwAOrXbr5S5VngM_QXfBbnTiP2nV9UQZ0yz6fw3FSxMt-xfus1S2wo63",
       style: "Synthwave",

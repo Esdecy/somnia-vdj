@@ -47,4 +47,6 @@ export interface Dream {
   visuals: DreamVisuals;
   details: DreamDetails;
   tracks: DreamTracks;
+  lifeEpoch?: string; // E.g., "Ordinary Life", "Before Wedding", "Career Transition"
+  sleepEnvironment?: string; // E.g., "Home Bed", "Traveling/Hotel", "Nap Context"
 }

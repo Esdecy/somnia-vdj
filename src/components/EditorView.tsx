@@ -25,8 +25,12 @@ import {
   Compass,
   Smile,
   Zap,
+  MessageSquare,
+  HelpCircle,
+  Send,
+  Loader2,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { Dream, TrackClip } from "../types";
 import DreamPlayer from "./DreamPlayer";
 
@@ -50,6 +54,13 @@ export default function EditorView({
   const [titleInput, setTitleInput] = useState(dream.title);
   const [refinePrompt, setRefinePrompt] = useState(dream.visuals.refinePrompt);
   const [isRendering, setIsRendering] = useState(false);
+
+  // Interpretation Panel state variables
+  const [interpretation, setInterpretation] = useState<string>("");
+  const [interpreting, setInterpreting] = useState(false);
+  const [customQuestion, setCustomQuestion] = useState("");
+  const [interpreterChat, setInterpreterChat] = useState<{ sender: "user" | "somnia"; text: string }[]>([]);
+  const [selectedPresetSymbol, setSelectedPresetSymbol] = useState<string | null>(null);
 
   // States to implement simple undo/redo
   const [history, setHistory] = useState<Dream[]>([dream]);
@@ -164,6 +175,45 @@ export default function EditorView({
         },
       };
       pushToHistory(updated);
+    }
+  };
+
+  const handleRequestInterpretation = async (customQ?: string) => {
+    setInterpreting(true);
+    const questionText = customQ || customQuestion;
+    
+    if (questionText) {
+      setInterpreterChat(prev => [...prev, { sender: "user", text: questionText }]);
+      setCustomQuestion("");
+    }
+
+    try {
+      const response = await fetch("/api/interpret-dream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: activeDream.text,
+          question: questionText || undefined
+        })
+      });
+      const data = await response.json();
+      if (data.status === "success" || data.status === "fallback") {
+        if (questionText) {
+          setInterpreterChat(prev => [...prev, { sender: "somnia", text: data.interpretation }]);
+        } else {
+          setInterpretation(data.interpretation);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      const errMsg = "Fell back. Compare your current life milestones and sleep bed environmental conditions to parse active REM triggers.";
+      if (questionText) {
+        setInterpreterChat(prev => [...prev, { sender: "somnia", text: errMsg }]);
+      } else {
+        setInterpretation(errMsg);
+      }
+    } finally {
+      setInterpreting(false);
     }
   };
 
@@ -341,6 +391,154 @@ export default function EditorView({
 
           </div>
         </section>
+
+        {/* Right column sidebar: Somnia Subconscious Interpreter Guide */}
+        <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-white/10 bg-[#0f1122]/95 flex flex-col h-full overflow-hidden shrink-0">
+          {/* Header block with statistics & metadata */}
+          <div className="p-4 border-b border-white/5 space-y-2 shrink-0 bg-black/15 text-left bg-gradient-to-tr from-[#ca9eff]/5 to-transparent">
+            <h3 className="text-xs font-bold font-label-caps tracking-widest text-[#ca9eff] flex items-center gap-1.5">
+              <MessageSquare className="w-4 h-4 text-[#ca9eff] shrink-0" /> Somnia Subconscious Guide
+            </h3>
+            <p className="text-[10px] text-on-surface-variant/80">
+              Correlate current mental patterns, waking milestones, and sensory environments to interpret REM dream structures.
+            </p>
+
+            {/* Bedrock correlations badges */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {activeDream.lifeEpoch && (
+                <span className="text-[9px] font-mono bg-[#ca9eff]/10 border border-[#ca9eff]/20 text-[#ca9eff] px-2 py-0.5 rounded">
+                  Milestone: {activeDream.lifeEpoch}
+                </span>
+              )}
+              {activeDream.sleepEnvironment && (
+                <span className="text-[9px] font-mono bg-[#00dbe9]/10 border border-[#00dbe9]/20 text-[#00dbe9] px-2 py-0.5 rounded">
+                  Bed: {activeDream.sleepEnvironment}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-grow overflow-y-auto p-4 space-y-4 scrollbar-thin">
+            {/* Main interpretation wrapper */}
+            <div className="space-y-2.5">
+              <span className="text-[10px] font-bold font-label-caps tracking-wider text-on-surface-variant flex items-center justify-between">
+                <span>PSYCHOLOGICAL INTERPRETATION</span>
+                {interpreting && <Loader2 className="w-3 h-3 text-secondary animate-spin" />}
+              </span>
+
+              {interpretation ? (
+                <div className="p-3 bg-white/5 border border-white/5 rounded-xl text-left space-y-2 text-xs leading-relaxed text-on-surface-variant">
+                  <p className="whitespace-pre-wrap">{interpretation}</p>
+                </div>
+              ) : (
+                <div className="glass-panel p-5 rounded-xl border border-dashed border-white/10 text-center space-y-3 bg-black/15">
+                  <HelpCircle className="w-7 h-7 text-secondary/50 mx-auto animate-pulse" />
+                  <p className="text-[11px] text-on-surface-variant max-w-xs mx-auto leading-relaxed">
+                    Would you like to analyze this dream and look up its subconscious correlations and symbols?
+                  </p>
+                  <button
+                    onClick={() => handleRequestInterpretation()}
+                    disabled={interpreting}
+                    className="px-4 py-2 bg-gradient-to-tr from-[#9efffc] to-[#ca9eff] text-[#0b0d1f] hover:brightness-110 rounded-full text-[10px] font-bold font-label-caps flex items-center justify-center gap-1.5 mx-auto transition-all transform hover:scale-[1.02] cursor-pointer"
+                  >
+                    {interpreting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        INTERPRETING...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        SEEK INTERPRETATION
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Symbols Quick Dictionary Selector */}
+            <div className="space-y-2 border-t border-white/5 pt-3">
+              <span className="text-[10px] font-bold font-label-caps tracking-wider text-on-surface-variant block text-left">ASK ABOUT RECURRING SYMBOLS</span>
+              <div className="flex flex-wrap gap-1.5 justify-start">
+                {[
+                  { name: "Water & Depth", detail: "Metaphor of deep emotions, the passive subconscious, or unresolved flow states of waking routine." },
+                  { name: "Flight & Floating", detail: "Signifies lucid control, psychological empowerment, or the desire to rise above waking limitations." },
+                  { name: "Falling Anomaly", detail: "Often mirrors minor stress, a threat of missing control parameters, or active high-pressure career tasks." },
+                  { name: "Frozen Clocks", detail: "A prompt regarding waking time pressure, timeline transitions, or an active reminder to ground yourself." },
+                  { name: "Shadow Figures", detail: "Shadow entities represent aspects of self or tensions projectively processed in REM stages." }
+                ].map((s) => (
+                  <button
+                    key={s.name}
+                    onClick={() => {
+                      setSelectedPresetSymbol(s.name);
+                      setInterpreterChat(prev => [
+                        ...prev,
+                        { sender: "user", text: `What is the psychological meaning of ${s.name}?` },
+                        { sender: "somnia", text: s.detail }
+                      ]);
+                    }}
+                    className="text-[10px] bg-white/5 border border-white/5 hover:border-secondary/30 text-on-surface hover:text-[#ca9eff] rounded-lg px-2.5 py-1 transition-all cursor-pointer text-left"
+                  >
+                    + {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Conversation chat with the interpreter */}
+            <div className="space-y-2 pt-3 border-t border-white/5">
+              <span className="text-[10px] font-bold font-label-caps tracking-wider text-on-surface-variant block uppercase text-left">Interactive Symbol Chat</span>
+              
+              <div className="min-h-[100px] max-h-[180px] overflow-y-auto bg-black/20 rounded-xl p-2.5 border border-white/5 space-y-2.5 text-xs text-left scrollbar-thin">
+                {interpreterChat.length === 0 ? (
+                  <p className="text-[10px] text-on-surface-variant/40 italic text-center py-4">No custom symbols queried yet. Type a question below or click a symbol to ask Somnia.</p>
+                ) : (
+                  interpreterChat.map((msg, mIdx) => (
+                    <div key={mIdx} className={`space-y-1 ${msg.sender === "user" ? "text-right" : "text-left"}`}>
+                      <span className="font-mono text-[9px] text-on-surface-variant/50 uppercase block">
+                        {msg.sender === "user" ? "You" : "Somnia Guide"}
+                      </span>
+                      <div className={`p-2 rounded-lg inline-block text-xs ${
+                        msg.sender === 'user' 
+                          ? 'bg-secondary/15 border border-secondary/20 text-on-surface text-left' 
+                          : 'bg-white/5 border border-white/5 text-on-surface-variant text-left'
+                      }`}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Chat action form input */}
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (customQuestion.trim()) {
+                    handleRequestInterpretation(customQuestion);
+                  }
+                }}
+                className="flex gap-1.5"
+              >
+                <input
+                  type="text"
+                  value={customQuestion}
+                  onChange={(e) => setCustomQuestion(e.target.value)}
+                  placeholder="Ask Somnia symbol..."
+                  className="flex-grow bg-black/20 border border-white/10 rounded-full px-3 py-1.5 text-xs text-[#cac2e1] focus:border-[#ca9eff] outline-none placeholder:text-on-surface-variant/40"
+                />
+                <button
+                  type="submit"
+                  disabled={interpreting || !customQuestion.trim()}
+                  className="p-1.5 rounded-full bg-secondary text-black hover:brightness-110 disabled:opacity-40 transition-all cursor-pointer flex items-center justify-center shrink-0 focus:outline-none"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </form>
+            </div>
+          </div>
+        </aside>
       </main>
 
       {/* Bottom Timeline Section (As per design Screen 4) */}

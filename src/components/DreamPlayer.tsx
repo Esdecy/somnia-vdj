@@ -45,6 +45,18 @@ export default function DreamPlayer({
   const [swayX, setSwayX] = useState(0);
   const [swayY, setSwayY] = useState(0);
 
+  // Voice player and Synthesizer sound refs
+  const narrationRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const synthNodesRef = useRef<{
+    droneOsc?: OscillatorNode;
+    chimeOscs?: OscillatorNode[];
+    droneGain?: GainNode;
+    chimeGain?: GainNode;
+    filter?: BiquadFilterNode;
+    pulseInterval?: NodeJS.Timeout;
+  }>({});
+
   useEffect(() => {
     let theta = 0;
     const interval = setInterval(() => {
@@ -56,6 +68,213 @@ export default function DreamPlayer({
     }, 50);
     return () => clearInterval(interval);
   }, [isPlaying]);
+
+  // Sycned narration player
+  useEffect(() => {
+    if (dream.voiceUrl) {
+      if (!narrationRef.current) {
+        narrationRef.current = new Audio(dream.voiceUrl);
+      }
+      narrationRef.current.loop = false;
+
+      if (isPlaying) {
+        narrationRef.current.currentTime = currentTime;
+        narrationRef.current.play().catch((e) => console.warn("Narration playback deferred by browser context", e));
+      } else {
+        narrationRef.current.pause();
+      }
+    }
+  }, [isPlaying, dream.voiceUrl]);
+
+  // Sync narration on scrub/drift
+  useEffect(() => {
+    if (dream.voiceUrl && narrationRef.current) {
+      if (Math.abs(narrationRef.current.currentTime - currentTime) > 0.6) {
+        narrationRef.current.currentTime = currentTime;
+      }
+    }
+  }, [currentTime, dream.voiceUrl]);
+
+  // Ethereal Web Audio Sleep Synthesizer Drone
+  useEffect(() => {
+    const cleanupSynth = () => {
+      const s = synthNodesRef.current;
+      if (s.droneOsc) {
+        try { s.droneOsc.stop(); } catch {}
+        s.droneOsc.disconnect();
+        s.droneOsc = undefined;
+      }
+      if (s.chimeOscs) {
+        s.chimeOscs.forEach((osc) => {
+          try { osc.stop(); } catch {}
+          osc.disconnect();
+        });
+        s.chimeOscs = [];
+      }
+      if (s.droneGain) {
+        s.droneGain.disconnect();
+        s.droneGain = undefined;
+      }
+      if (s.chimeGain) {
+        s.chimeGain.disconnect();
+        s.chimeGain = undefined;
+      }
+      if (s.filter) {
+        s.filter.disconnect();
+        s.filter = undefined;
+      }
+      if (s.pulseInterval) {
+        clearInterval(s.pulseInterval);
+        s.pulseInterval = undefined;
+      }
+    };
+
+    if (!isPlaying || !activeAtmosphere) {
+      cleanupSynth();
+      return;
+    }
+
+    try {
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtxClass) return;
+
+      const ctx = audioCtxRef.current || new AudioCtxClass();
+      audioCtxRef.current = ctx;
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+
+      cleanupSynth();
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(450, ctx.currentTime);
+      filter.Q.setValueAtTime(1, ctx.currentTime);
+      filter.connect(ctx.destination);
+      synthNodesRef.current.filter = filter;
+
+      const name = activeAtmosphere.name.toLowerCase();
+
+      // Nightmare Heartbeat pulse
+      if (
+        name.includes("heartbeat") ||
+        name.includes("dread") ||
+        name.includes("nightmare") ||
+        dream.details.emotion.toLowerCase().includes("dread")
+      ) {
+        const triggerHeartbeat = () => {
+          if (ctx.state === "suspended") return;
+
+          // Heartbeat beat 1
+          const osc1 = ctx.createOscillator();
+          const gain1 = ctx.createGain();
+          osc1.connect(gain1);
+          gain1.connect(ctx.destination);
+          osc1.type = "sine";
+          osc1.frequency.setValueAtTime(55, ctx.currentTime);
+          osc1.frequency.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          gain1.gain.setValueAtTime(0.5, ctx.currentTime);
+          gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc1.start();
+          osc1.stop(ctx.currentTime + 0.35);
+
+          // Heartbeat beat 2
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          setTimeout(() => {
+            if (!isPlaying || ctx.state === "suspended") return;
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.type = "sine";
+            osc2.frequency.setValueAtTime(50, ctx.currentTime);
+            osc2.frequency.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            gain2.gain.setValueAtTime(0.5, ctx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc2.start();
+            osc2.stop(ctx.currentTime + 0.35);
+          }, 300);
+        };
+
+        triggerHeartbeat();
+        synthNodesRef.current.pulseInterval = setInterval(triggerHeartbeat, 1600);
+      }
+      // Glass Chimes
+      else if (
+        name.includes("glass") ||
+        name.includes("crystal") ||
+        name.includes("oracle") ||
+        name.includes("whisper")
+      ) {
+        const droneOsc = ctx.createOscillator();
+        const droneGain = ctx.createGain();
+        droneOsc.type = "triangle";
+        droneOsc.frequency.setValueAtTime(110, ctx.currentTime);
+        droneGain.gain.setValueAtTime(0.12, ctx.currentTime);
+        droneOsc.connect(droneGain);
+        droneGain.connect(filter);
+        droneOsc.start();
+        synthNodesRef.current.droneOsc = droneOsc;
+        synthNodesRef.current.droneGain = droneGain;
+
+        const chimeGain = ctx.createGain();
+        chimeGain.gain.setValueAtTime(0.05, ctx.currentTime);
+        chimeGain.connect(ctx.destination);
+        synthNodesRef.current.chimeGain = chimeGain;
+
+        const playChime = () => {
+          if (!isPlaying || ctx.state === "suspended") return;
+          const rootNotes = [440, 554.37, 659.25, 880];
+          const note = rootNotes[Math.floor(Math.random() * rootNotes.length)];
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(note, ctx.currentTime);
+
+          const individualGain = ctx.createGain();
+          individualGain.gain.setValueAtTime(0.06, ctx.currentTime);
+          individualGain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 1.8);
+
+          osc.connect(individualGain);
+          individualGain.connect(chimeGain);
+          osc.start();
+          osc.stop(ctx.currentTime + 2);
+        };
+
+        playChime();
+        synthNodesRef.current.pulseInterval = setInterval(playChime, 2500);
+      }
+      // Ethereal drone
+      else {
+        const droneOsc = ctx.createOscillator();
+        const droneGain = ctx.createGain();
+        droneOsc.type = "triangle";
+        droneOsc.frequency.setValueAtTime(146.83, ctx.currentTime);
+
+        droneOsc.frequency.linearRampToValueAtTime(155, ctx.currentTime + 5);
+        droneOsc.frequency.linearRampToValueAtTime(146.83, ctx.currentTime + 10);
+
+        droneGain.gain.setValueAtTime(0.15, ctx.currentTime);
+        droneOsc.connect(droneGain);
+        droneGain.connect(filter);
+        droneOsc.start();
+        synthNodesRef.current.droneOsc = droneOsc;
+        synthNodesRef.current.droneGain = droneGain;
+      }
+    } catch (e) {
+      console.warn("Web Audio compilation blocked", e);
+    }
+
+    return () => cleanupSynth();
+  }, [isPlaying, activeAtmosphere?.id]);
+
+  // Clean playheads on unmount
+  useEffect(() => {
+    return () => {
+      if (narrationRef.current) {
+        narrationRef.current.pause();
+        narrationRef.current = null;
+      }
+    };
+  }, []);
 
   // Handle continuous playhead logic
   useEffect(() => {
@@ -279,8 +498,13 @@ export default function DreamPlayer({
 
           {/* Bottom Metabar Overlay */}
           <div className="absolute bottom-4 left-4 z-10 pointer-events-none flex flex-col font-mono text-[10px] text-left gap-0.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded border border-white/5">
-            <div className="text-secondary font-semibold uppercase tracking-wider text-[9px]">
+            <div className="text-secondary font-semibold uppercase tracking-wider text-[9px] flex items-center gap-1.5">
               Active Visual: {activeVisual?.name || "Null Frame"}
+              {dream.voiceUrl && (
+                <span className="text-[8px] tracking-widest text-[#00dbe9] bg-[#00dbe9]/10 px-1 rounded animate-pulse">
+                  VOICEOVER SYNCED
+                </span>
+              )}
             </div>
             <div className="text-tertiary">
               Atmo: {activeAtmosphere?.name || "None"} | Light: {activeLighting?.name || "Darkness"}
