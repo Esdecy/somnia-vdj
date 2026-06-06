@@ -4,11 +4,12 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { Volume2, VolumeX, Mic, Play, Square, Sparkles, Headphones, Radio, ArrowRight, BookOpen, Upload, Check, Loader2 } from "lucide-react";
+import { Volume2, VolumeX, Mic, Play, Square, Sparkles, Headphones, Radio, ArrowRight, BookOpen, Upload, Check, Loader2, Trash2, HelpCircle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function SynthesizerView() {
   const [binauralActive, setBinauralActive] = useState(false);
+  const [activePathway, setActivePathway] = useState<"binaural" | "learning">("binaural");
   const [frequency, setFrequency] = useState(136.1); // Carrier frequency (OM tone)
   const [binauralBeat, setBinauralBeat] = useState(4.0); // Beat frequency (Delta/Theta)
   const [waveType, setWaveType] = useState<"delta" | "theta" | "alpha" | "beta" | "gamma" | "solfeggio" | "pink">("theta");
@@ -19,6 +20,19 @@ export default function SynthesizerView() {
   const [affirmationAudioBlob, setAffirmationAudioBlob] = useState<string | null>(null);
   const [playingAffirmation, setPlayingAffirmation] = useState(false);
   const [customWhisperText, setCustomWhisperText] = useState("Focus on your breathing. You are entering a vivid, clear dream.");
+
+  // ElevenLabs configurations
+  const [elevenLabsActive, setElevenLabsActive] = useState<boolean>(() => {
+    return localStorage.getItem("somnia_elevenlabs_active") === "true";
+  });
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState<string>(() => {
+    return localStorage.getItem("somnia_elevenlabs_key") || "";
+  });
+  const [elevenLabsVoiceId, setElevenLabsVoiceId] = useState<string>(() => {
+    return localStorage.getItem("somnia_elevenlabs_voice_id") || "pNInz6obpmX5f4vTe8yS"; // Warm elegant Lily voice
+  });
+  const [isFetchingElevenLabs, setIsFetchingElevenLabs] = useState(false);
+  const [elevenLabsError, setElevenLabsError] = useState<string | null>(null);
 
   // Sleep-Learning & Study Hub states
   const [selectedStudyTopic, setSelectedStudyTopic] = useState("vocab");
@@ -53,6 +67,19 @@ export default function SynthesizerView() {
     setNewCatLabel("");
     setNewCatDesc("");
     setNewCatLoop("");
+  };
+
+  const handleDeleteCustomProgram = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = customPrograms.filter(p => p.id !== id);
+    setCustomPrograms(updated);
+    try {
+      localStorage.setItem("somnia_custom_study_programs", JSON.stringify(updated));
+    } catch {}
+    if (selectedStudyTopic === id) {
+      setSelectedStudyTopic("vocab");
+      setIsStudyTrackArmed(false);
+    }
   };
 
   const defaultPrograms = [
@@ -108,6 +135,18 @@ export default function SynthesizerView() {
   useEffect(() => {
     updateOscillators();
   }, [frequency, binauralBeat, binauralActive]);
+
+  useEffect(() => {
+    localStorage.setItem("somnia_elevenlabs_active", String(elevenLabsActive));
+  }, [elevenLabsActive]);
+
+  useEffect(() => {
+    localStorage.setItem("somnia_elevenlabs_key", elevenLabsApiKey);
+  }, [elevenLabsApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem("somnia_elevenlabs_voice_id", elevenLabsVoiceId);
+  }, [elevenLabsVoiceId]);
 
   const startBinauralEngine = () => {
     try {
@@ -276,10 +315,13 @@ export default function SynthesizerView() {
     setRecordingAffirmation(false);
   };
 
-  const playRecordedAffirmation = () => {
+  const playRecordedAffirmation = async () => {
     if (playingAffirmation) {
       if (affirmationPlayerRef.current) {
         affirmationPlayerRef.current.pause();
+      }
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
       }
       setPlayingAffirmation(false);
       return;
@@ -292,21 +334,90 @@ export default function SynthesizerView() {
       setPlayingAffirmation(true);
       audio.onended = () => setPlayingAffirmation(false);
       audio.play().catch(e => console.warn(e));
-    } else {
-      // Speech synthesis affirmation fallback
-      try {
-        if ("speechSynthesis" in window) {
-          const synth = window.speechSynthesis;
-          const utterance = new SpeechSynthesisUtterance(customWhisperText);
-          utterance.rate = 0.8; // Dreamy whisper rate
-          utterance.pitch = 0.9;
-          utterance.onend = () => setPlayingAffirmation(false);
-          setPlayingAffirmation(true);
-          synth.speak(utterance);
-        }
-      } catch (err) {
-        console.warn(err);
+    } else if (elevenLabsActive) {
+      if (!elevenLabsApiKey) {
+        setElevenLabsError("Please enter your ElevenLabs API Key below to stream premium voices.");
+        return;
       }
+      setElevenLabsError(null);
+      setIsFetchingElevenLabs(true);
+      try {
+        const url = `https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceId || "pNInz6obpmX5f4vTe8yS"}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "xi-api-key": elevenLabsApiKey,
+          },
+          body: JSON.stringify({
+            text: customWhisperText || "Focus on your breathing. You are entering a vivid, clear dream.",
+            model_id: "eleven_monolingual_v1",
+            voice_settings: {
+              stability: 0.8,
+              similarity_boost: 0.85,
+              style: 0.05,
+              use_speaker_boost: true
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errBody = await response.text();
+          throw new Error(errBody || response.statusText);
+        }
+
+        const resBlob = await response.blob();
+        const blobUrl = URL.createObjectURL(resBlob);
+        const audio = new Audio(blobUrl);
+        affirmationPlayerRef.current = audio;
+        setPlayingAffirmation(true);
+        audio.onended = () => setPlayingAffirmation(false);
+        audio.play().catch(e => console.warn(e));
+      } catch (err: any) {
+        console.error("ElevenLabs request failed:", err);
+        setElevenLabsError(err.message || "Failed to reach ElevenLabs. Verify your API key and Voice ID.");
+        
+        // Fallback to standard native TTS so there is no dead state
+        playNativeSynthesisFallback();
+      } finally {
+        setIsFetchingElevenLabs(false);
+      }
+    } else {
+      playNativeSynthesisFallback();
+    }
+  };
+
+  const playNativeSynthesisFallback = () => {
+    try {
+      if ("speechSynthesis" in window) {
+        const synth = window.speechSynthesis;
+        synth.cancel();
+        const utterance = new SpeechSynthesisUtterance(customWhisperText);
+        
+        // Select a calm, realistic voice
+        const voices = synth.getVoices();
+        // Seek Google/natural/premium English voices first, fallback to standard English
+        const calmVoice = voices.find(v => 
+          v.lang.startsWith("en") && 
+          (v.name.toLowerCase().includes("google") || 
+           v.name.toLowerCase().includes("natural") || 
+           v.name.toLowerCase().includes("premium") ||
+           v.name.toLowerCase().includes("samantha") || 
+           v.name.toLowerCase().includes("david"))
+        ) || voices.find(v => v.lang.startsWith("en"));
+
+        if (calmVoice) {
+          utterance.voice = calmVoice;
+        }
+        utterance.rate = 0.72; // Slower, relaxed dreamy whisper rate
+        utterance.pitch = 0.85; // Lower, warm depth (not excited, very meditative)
+        
+        utterance.onend = () => setPlayingAffirmation(false);
+        setPlayingAffirmation(true);
+        synth.speak(utterance);
+      }
+    } catch (err) {
+      console.warn(err);
     }
   };
 
@@ -318,21 +429,88 @@ export default function SynthesizerView() {
   }, []);
 
   return (
-    <div className="w-full flex flex-col pt-4 pb-24 px-4 max-w-4xl mx-auto space-y-6">
+    <div className="w-full flex flex-col pt-4 pb-24 px-4 max-w-4xl mx-auto space-y-6 animate-fadeIn">
       
       {/* Title Header */}
-      <div className="text-left">
-        <h2 className="text-xl font-bold tracking-widest text-[#00dbe9] font-label-caps uppercase flex items-center gap-2">
-          <Headphones className="w-5 h-5 text-[#00dbe9] animate-pulse" />
-          Induction Sound Synthesizer
-        </h2>
-        <p className="text-xs text-on-surface-variant/80 mt-1">
-          Play real-time brainwave frequencies directly through your headphones to deepen REM sleep stages, or record custom whispering thresholds to trigger dream recall.
-        </p>
+      <div className="text-left space-y-3">
+        <div className="flex justify-between items-start flex-wrap gap-2">
+          <div>
+            <h2 className="text-2xl font-black tracking-wider text-[#00dbe9] font-display-lg uppercase flex items-center gap-2">
+              <Headphones className="w-6 h-6 text-[#00dbe9] animate-pulse" />
+              TRAIN WHILE SLEEPING
+            </h2>
+            <p className="text-sm text-[#cac5e4] mt-1">
+              Dual-utility portal: Use the True Binaural Beats Engine awake for mindfulness focus, or load memory courses to absorb information during deep sleep.
+            </p>
+          </div>
+        </div>
+
+        {/* Dynamic Expandable Help / Explainer Dropdown */}
+        <details className="group border border-white/10 bg-black/40 rounded-xl overflow-hidden transition-all text-sm">
+          <summary className="px-4 py-3 font-semibold text-secondary hover:bg-white/5 cursor-pointer flex justify-between items-center select-none">
+            <span className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#00dbe9]">
+              <HelpCircle className="w-4 h-4 text-[#00dbe9]" /> 📖 Unlocking Auditory Sleep Learning (Tap to learn)
+            </span>
+            <span className="text-xs text-on-surface-variant group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div className="p-4 border-t border-white/5 space-y-3 bg-black/60 text-xs text-on-surface-variant/90 leading-relaxed">
+            <p>
+              Somnia bridges cognitive training with REM states through two powerful modalities:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div className="p-2.5 bg-white/5 rounded-lg border border-white/5 space-y-1">
+                <span className="font-bold text-secondary font-mono tracking-wide uppercase text-[10px]">1. True Binaural Soundwaves (Awake or Dreaming)</span>
+                <p className="text-[11px] text-on-surface-variant/80">
+                  Plays slight frequency offsets in left/right channels. Listen awake to lock in high alpha/beta focus, or run continuously in sleep for Lucid Theta entry. <strong>Stereo headphones required.</strong>
+                </p>
+              </div>
+              <div className="p-2.5 bg-[#ca9eff]/5 rounded-lg border border-[#ca9eff]/10 space-y-1">
+                <span className="font-bold text-[#ca9eff] font-mono tracking-wide uppercase text-[10px]">2. Repetitive Sleep Learning (Sleeping)</span>
+                <p className="text-[11px] text-on-surface-variant/80">
+                  Loads SAT vocabulary, medical terminology, French verbs, or customized lesson plans. Synthesizes these into whispers layered over delta waves to encourage subconscious consolidation.
+                </p>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
 
-      {/* Grid: Synth module and Whispering trigger affirmations */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Pathway Selection Tab Switcher */}
+      <div className="grid grid-cols-2 p-1 bg-black/30 rounded-xl border border-white/5 max-w-lg mx-auto w-full shadow-lg shrink-0">
+        <button
+          onClick={() => setActivePathway("binaural")}
+          className={`py-3 px-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 select-none ${
+            activePathway === "binaural"
+              ? "bg-[#00dbe9]/10 text-[#00dbe9] border border-[#00dbe9]/25 shadow-[0_0_15px_rgba(0,219,233,0.1)]"
+              : "text-on-surface-variant/70 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <Radio className="w-4 h-4" /> Waking & Meditate
+        </button>
+        <button
+          onClick={() => setActivePathway("learning")}
+          className={`py-3 px-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 select-none ${
+            activePathway === "learning"
+              ? "bg-[#ca9eff]/10 text-[#ca9eff] border border-[#ca9eff]/25 shadow-[0_0_15px_rgba(202,158,255,0.1)]"
+              : "text-on-surface-variant/70 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <BookOpen className="w-4 h-4" /> Sleep Learn Loops
+        </button>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {activePathway === "binaural" ? (
+          <motion.div
+            key="binaural"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6 w-full"
+          >
+            {/* Grid: Synth module and Whispering trigger affirmations */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* Synthesizer Card */}
         <div className="glass-panel p-5 rounded-2xl border border-white/5 text-left flex flex-col justify-between space-y-4">
@@ -373,10 +551,10 @@ export default function SynthesizerView() {
           </div>
 
           {/* Carrier Tone Slider control */}
-          <div className="space-y-1 pt-2">
-            <div className="flex justify-between items-baseline font-mono text-[10px] text-on-surface-variant">
-              <span>CARRIER FREQUENCY (CENTER NODE)</span>
-              <span className="text-[#00dbe9] font-bold">{frequency.toFixed(1)} Hz (Cosmic OM)</span>
+          <div className="space-y-2 pt-2">
+            <div className="flex justify-between items-baseline text-xs text-on-surface-variant">
+              <span className="font-semibold uppercase tracking-wider text-[11px] text-on-surface/90">Center Carrier Tone</span>
+              <span className="text-[#00dbe9] font-bold font-mono text-xs">{frequency.toFixed(1)} Hz (Comfort Tone)</span>
             </div>
             <input
               type="range"
@@ -385,15 +563,15 @@ export default function SynthesizerView() {
               step="0.5"
               value={frequency}
               onChange={(e) => setFrequency(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-black/40 rounded-lg appearance-none cursor-pointer accent-tertiary"
+              className="w-full h-2 bg-black/40 rounded-lg appearance-none cursor-pointer accent-tertiary"
             />
           </div>
 
           {/* Beat Frequency control */}
           <div className="space-y-2">
-            <div className="flex justify-between items-baseline font-mono text-[10px] text-on-surface-variant">
-              <span>BINAURAL BEAT SPEED DIFFERENTIAL</span>
-              <span className="text-secondary font-bold">+{binauralBeat.toFixed(1)} Hz</span>
+            <div className="flex justify-between items-baseline text-xs text-on-surface-variant">
+              <span className="font-semibold uppercase tracking-wider text-[11px] text-on-surface/90">Binaural Frequency difference Offset</span>
+              <span className="text-secondary font-bold font-mono text-xs">+{binauralBeat.toFixed(1)} Hz (Target wave)</span>
             </div>
             <input
               type="range"
@@ -402,7 +580,7 @@ export default function SynthesizerView() {
               step="0.1"
               value={binauralBeat}
               onChange={(e) => setBinauralBeat(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-black/40 rounded-lg appearance-none cursor-pointer accent-secondary"
+              className="w-full h-2 bg-black/40 rounded-lg appearance-none cursor-pointer accent-secondary"
             />
             
             {/* Dynamic visual brainwave zone representation */}
@@ -506,9 +684,9 @@ export default function SynthesizerView() {
 
           {/* Volume output node */}
           <div className="space-y-1">
-            <div className="flex justify-between items-baseline font-mono text-[10px] text-on-surface-variant">
-              <span>SYNTH GAIN LIMITER</span>
-              <span className="text-on-surface font-semibold">{(noiseVolume * 100).toFixed(0)}%</span>
+            <div className="flex justify-between items-baseline text-xs text-on-surface-variant">
+              <span className="font-semibold uppercase tracking-wider text-[11px] text-on-surface/90">Binaural Volume Level</span>
+              <span className="text-on-surface font-mono font-bold text-xs">{(noiseVolume * 100).toFixed(0)}%</span>
             </div>
             <input
               type="range"
@@ -517,26 +695,26 @@ export default function SynthesizerView() {
               step="0.01"
               value={noiseVolume}
               onChange={(e) => setNoiseVolume(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-black/40 rounded-lg appearance-none cursor-pointer accent-white"
+              className="w-full h-2 bg-black/40 rounded-lg appearance-none cursor-pointer accent-white"
             />
           </div>
 
           {/* Trigger Play Synthesizer waves */}
           <button
             onClick={startBinauralEngine}
-            className={`w-full py-3 rounded-full font-label-caps text-xs tracking-wider font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+            className={`w-full py-3.5 rounded-full font-label-caps text-xs tracking-wider font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
               binauralActive
                 ? "bg-error/20 border border-error/40 text-error hover:bg-error/30"
-                : "bg-[#00dbe9] hover:bg-opacity-90 text-[#090b15] shadow-[0_0_15px_rgba(0,219,233,0.3)] animate-pulse"
+                : "bg-[#00dbe9] hover:bg-opacity-90 text-[#090b15] shadow-[0_0_15px_rgba(0,219,233,0.3)]"
             }`}
           >
             {binauralActive ? (
               <>
-                <VolumeX className="w-4 h-4" /> DISENGAGE FREQUENCY DRAUGHT
+                <VolumeX className="w-4 h-4" /> STOP BINAURAL BRAINWAVE SYNTH
               </>
             ) : (
               <>
-                <Volume2 className="w-4 h-4 animate-bounce" /> ENGAGE COGNITIVE DRAPE SYNTH
+                <Volume2 className="w-4 h-4" /> START BINAURAL BACKGROUND SOUND
               </>
             )}
           </button>
@@ -603,49 +781,118 @@ export default function SynthesizerView() {
             />
           </div>
 
+          {/* Premium ElevenLabs Voice Integration */}
+          <div className="bg-black/40 p-3 rounded-xl border border-white/5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[9px] text-[#00dbe9] tracking-widest block uppercase font-bold">Premium ElevenLabs Voice</span>
+              <label className="relative inline-flex items-center cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={elevenLabsActive}
+                  onChange={(e) => setElevenLabsActive(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-8 h-4 bg-white/10 rounded-full peer peer-focus:ring-0 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#00dbe9]" />
+              </label>
+            </div>
+
+            {elevenLabsActive && (
+              <div className="space-y-2 animate-fadeIn pt-1">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-mono text-on-surface-variant/80">ElevenLabs API Key</label>
+                  <input
+                    type="password"
+                    value={elevenLabsApiKey}
+                    onChange={(e) => setElevenLabsApiKey(e.target.value)}
+                    placeholder="paste xi-api-key here..."
+                    className="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-on-surface focus:border-[#00dbe9] outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] font-mono text-on-surface-variant/80 font-bold">Voice Model</label>
+                  <select
+                    value={elevenLabsVoiceId}
+                    onChange={(e) => setElevenLabsVoiceId(e.target.value)}
+                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-xs text-on-surface focus:border-[#00dbe9] outline-none cursor-pointer"
+                  >
+                    <option value="pNInz6obpmX5f4vTe8yS" className="bg-slate-900 text-white">Lily (Warm Web Voice)</option>
+                    <option value="EXAVITQu4vr4xnSDxMaL" className="bg-slate-900 text-white">Bella (Calm Whisper)</option>
+                    <option value="ErXwobaYiN019PkySvjV" className="bg-slate-900 text-white">Antoni (Soothing Meditative)</option>
+                    <option value="TX3LPaxZ7Dnl7fjgWs0Y" className="bg-slate-900 text-white">Rachel (Narrative Soft)</option>
+                  </select>
+                </div>
+
+                {elevenLabsError && (
+                  <div className="text-[10px] text-red-400 bg-red-400/10 p-2 rounded-lg leading-snug border border-red-500/10">
+                    {elevenLabsError}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Playback trigger */}
           <button
             onClick={playRecordedAffirmation}
+            disabled={isFetchingElevenLabs}
             className={`w-full py-2.5 rounded-xl text-center text-xs font-bold tracking-widest font-label-caps border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               playingAffirmation
                 ? "bg-secondary-container/20 border-secondary text-secondary"
                 : "bg-surface-container/30 border-white/10 text-on-surface hover:border-[#ca9eff]/30 hover:bg-[#ca9eff]/10"
             }`}
           >
-            <Play className={`w-3.5 h-3.5 ${playingAffirmation ? "animate-spin" : ""}`} />
-            {playingAffirmation ? "STOP SLEEP AFFIRMATION LOOP" : "TEST SLEEP AFFIRMATION FEEDBACK"}
+            {isFetchingElevenLabs ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#ca9eff]" />
+                GENERATING PREMIUM AUDIO...
+              </>
+            ) : (
+              <>
+                <Play className={`w-3.5 h-3.5 ${playingAffirmation ? "animate-spin" : ""}`} />
+                {playingAffirmation ? "STOP SLEEP AFFIRMATION LOOP" : "TEST SLEEP AFFIRMATION FEEDBACK"}
+              </>
+            )}
           </button>
         </div>
-
       </div>
-
-      {/* Learn While You Sleep & Study Hub Card */}
+    </motion.div>
+  ) : (
+        <motion.div
+          key="learning"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.25 }}
+          className="space-y-6 w-full animate-fadeIn"
+        >
+          {/* Learn While You Sleep & Study Hub Card */}
       <div className="glass-panel p-5 rounded-2xl border border-white/5 text-left space-y-4">
-        <div className="flex justify-between items-center border-b border-white/5 pb-2 flex-wrap gap-2">
-          <h3 className="text-xs font-bold font-label-caps tracking-widest text-[#ca9eff] flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-secondary" /> Learn While You Sleep: Study-Paced REM Loop
+        <div className="flex justify-between items-center border-b border-white/5 pb-2.5 flex-wrap gap-2">
+          <h3 className="text-sm font-bold font-label-caps tracking-widest text-[#ca9eff] flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-[#ca9eff]" /> Active Sleep Learning Loops & Study Tracker
           </h3>
           {isStudyTrackArmed ? (
-            <span className="text-[10px] font-mono tracking-widest text-[#00dbe9] bg-[#00dbe9]/10 border border-[#00dbe9]/20 font-bold px-2.5 py-0.5 rounded animate-pulse flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" /> STUDY TRACK ARMED
+            <span className="text-xs font-mono tracking-widest text-[#00dbe9] bg-[#00dbe9]/10 border border-[#00dbe9]/20 font-bold px-2.5 py-1 rounded animate-pulse flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" /> STUDY TRACK ACTIVE
             </span>
           ) : (
-            <span className="text-[10px] font-mono text-on-surface-variant/50">
-              Syllabus Idle
+            <span className="text-xs font-mono text-on-surface-variant/70">
+              Syllabus Ready
             </span>
           )}
         </div>
 
-        <p className="text-[11px] text-on-surface-variant leading-relaxed">
-          Unlock standard spaced repetition while dreaming. Sleep-learning overlays informational nodes and study terms over theta-frequency carrier waves. Choose a curated course, paste your study guide, or drop in lecture audio.
+        <p className="text-xs text-[#cac5e4] leading-relaxed">
+          Overlay flashcards, study facts, or chapter notes directly over low-frequency background hums during REM sleep states. Choose a plan, add customized topics, or paste lecture guides below.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
           {/* Column A: Curated courses */}
-          <div className="space-y-2">
-            <span className="font-mono text-[9px] text-[#ca9eff] tracking-widest block uppercase font-bold">1. Select Study Program</span>
+          <div className="space-y-3">
+            <span className="font-mono text-xs text-[#ca9eff] tracking-wider block uppercase font-bold">1. Select Study Program</span>
             
-            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
               {allPrograms.map((prog) => (
                 <button
                   key={prog.id}
@@ -653,28 +900,41 @@ export default function SynthesizerView() {
                     setSelectedStudyTopic(prog.id);
                     setIsStudyTrackArmed(false);
                   }}
-                  className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer group ${
+                  className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer group flex justify-between items-start gap-2 ${
                     selectedStudyTopic === prog.id
                       ? "bg-secondary/15 border-secondary text-secondary"
                       : "bg-black/15 border-white/5 text-on-surface hover:bg-black/20"
                   }`}
                 >
-                  <div className="font-semibold text-xs flex justify-between items-center">
-                    <span>{prog.label}</span>
-                    {prog.id.startsWith("custom_") && (
-                      <span className="text-[7px] font-mono tracking-widest text-[#00dbe9] border border-[#00dbe9]/20 px-1 py-0.2 rounded-sm bg-[#00dbe9]/5">
-                        DYNAMIC
-                      </span>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-xs flex items-center gap-1.5 flex-wrap">
+                      <span>{prog.label}</span>
+                      {prog.id.startsWith("custom_") && (
+                        <span className="text-[8px] font-mono tracking-wider text-[#00dbe9] border border-[#00dbe9]/20 px-1 py-0.2 rounded-sm bg-[#00dbe9]/5 uppercase shrink-0 font-extrabold">
+                          CUSTOM
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-on-surface-variant/70 leading-normal mt-1.5 group-hover:text-on-surface-variant">
+                      {prog.desc}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-on-surface-variant/70 leading-normal mt-0.5 group-hover:text-on-surface-variant">{prog.desc}</div>
+                  {prog.id.startsWith("custom_") && (
+                    <span
+                      onClick={(e) => handleDeleteCustomProgram(prog.id, e)}
+                      className="text-on-surface-variant/50 hover:text-red-400 p-1 rounded-lg hover:bg-white/10 transition-all shrink-0 cursor-pointer"
+                      title="Delete Custom Course"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
 
             {/* Inline Dynamic Category Creator form */}
-            <form onSubmit={handleAddCustomProgram} className="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2 mt-3 text-left">
-              <span className="text-[8px] font-mono text-[#00dbe9] tracking-wider block uppercase font-bold">
+            <form onSubmit={handleAddCustomProgram} className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-2 mt-3 text-left">
+              <span className="text-[10px] font-mono text-[#00dbe9] tracking-wider block uppercase font-bold">
                 + Create Custom Study Loop
               </span>
               <input
@@ -682,7 +942,7 @@ export default function SynthesizerView() {
                 placeholder="Category Title (e.g. World Geography)"
                 value={newCatLabel}
                 onChange={(e) => setNewCatLabel(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder-on-surface-variant/50 focus:outline-none focus:border-secondary"
+                className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-on-surface-variant/50 focus:outline-none focus:border-secondary"
                 required
               />
               <input
@@ -690,19 +950,19 @@ export default function SynthesizerView() {
                 placeholder="Brief Description (e.g. capitals mnemonic)"
                 value={newCatDesc}
                 onChange={(e) => setNewCatDesc(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-[10px] text-white placeholder-on-surface-variant/50 focus:outline-none focus:border-secondary"
+                className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-on-surface-variant/50 focus:outline-none focus:border-secondary"
               />
               <textarea
                 placeholder="Active Whispering Fact Loop..."
                 value={newCatLoop}
                 onChange={(e) => setNewCatLoop(e.target.value)}
                 rows={2}
-                className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-[10px] text-white placeholder-on-surface-variant/50 focus:outline-none focus:border-secondary resize-none"
+                className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-on-surface-variant/50 focus:outline-none focus:border-[#ca9eff] resize-none"
                 required
               />
               <button
                 type="submit"
-                className="w-full py-1 bg-secondary/10 hover:bg-secondary/20 border border-secondary/25 text-secondary text-[10px] font-semibold rounded transition-colors uppercase font-mono cursor-pointer"
+                className="w-full py-1.5 bg-secondary/10 hover:bg-secondary/20 border border-secondary/25 text-secondary text-xs font-semibold rounded transition-colors uppercase font-mono cursor-pointer"
               >
                 Inject This Course
               </button>
@@ -853,7 +1113,7 @@ export default function SynthesizerView() {
                 }, 1400);
               }}
               disabled={isSynthesizingSyllabus}
-              className={`w-full py-2 rounded-xl text-center text-xs font-bold font-label-caps flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+              className={`w-full py-3.5 rounded-xl text-center text-xs font-bold font-label-caps flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
                 isStudyTrackArmed
                   ? "bg-[#00dbe9]/10 border border-[#00dbe9]/30 text-[#00dbe9]"
                   : "bg-gradient-to-tr from-[#9efffc] to-[#ca9eff] text-[#05060f] hover:brightness-110 shadow-lg"
@@ -862,23 +1122,26 @@ export default function SynthesizerView() {
               {isSynthesizingSyllabus ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  COUPLING REM CODES...
+                  PREPARING STUDY TRACK...
                 </>
               ) : isStudyTrackArmed ? (
                 <>
                   <Check className="w-3.5 h-3.5" />
-                  REM STUDY CYCLE ARMED
+                  SLEEP STUDY LOOP ACTIVATED
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5 text-[#05060f]" />
-                  SYNTHESIZE & ARM LOOP
+                  SAVE & ACTIVATE AUDIO LOOP
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
+    </motion.div>
+  )}
+  </AnimatePresence>
 
       {/* Instructional guidance card on audio induction */}
       <div className="glass-panel p-5 rounded-2xl border border-white/5 text-left space-y-3">

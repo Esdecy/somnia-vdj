@@ -402,12 +402,15 @@ export default function RecordView({ onDreamSubmit }: RecordViewProps) {
                 className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-on-surface focus:border-secondary outline-none cursor-pointer"
               >
                 <option value="Ordinary Life">Ordinary/Routine Life</option>
-                <option value="Career Transition">During Career Transition / Unemployment</option>
-                <option value="Relationship Shift">Relationship Breakup / Divorce / Shift</option>
-                <option value="Festive Preparation">Pre-Wedding / Milestone Celebration</option>
-                <option value="High Pressure Sprint">Extreme Work/Creative Crunch</option>
-                <option value="Grief or Healing">Grief or Active Healing Period</option>
-                <option value="Travel / Wandering">Holiday / Vagabond Traveling</option>
+                <option value="New Beginnings">🌱 New Job / Fresh Creative Beginning</option>
+                <option value="Spiritual Awakening">🌌 Spiritual Awakening & Mindfulness Drive</option>
+                <option value="Personal Triumph">🏆 Overcoming Obstacles & Self-Mastery</option>
+                <option value="Creative Inspiration">🎨 High Creative Flow & Artistic Sprint</option>
+                <option value="Healthy Lifestyle">🧘 Deep Reset & Healthy Rejuvenation</option>
+                <option value="Career Transition">💼 Career Transition / New Direction</option>
+                <option value="Relationship Shift">💖 Relationship Spark or Connection Shift</option>
+                <option value="Festive Preparation">🎉 Milestone Celebration & Festive Prep</option>
+                <option value="Travel / Wandering">✈️ World Travel & Wandering Adventure</option>
               </select>
               <p className="text-[9px] text-on-surface-variant/70 leading-normal">
                 Maps recurring thematic structures to real-world life periods.

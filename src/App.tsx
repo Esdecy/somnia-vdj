@@ -21,7 +21,9 @@ import {
   Headphones,
   Edit3,
   Mic,
+  HelpCircle,
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { Dream } from "./types";
 import { loadDreams, saveDreams, generateAnalyticFallback } from "./data";
 import FeedView from "./components/FeedView";
@@ -54,9 +56,53 @@ export default function App() {
     sleepEnvironment: "Home Bed",
   });
 
-  // Preload initial dreams from storage
+  // Global Tour Guide states
+  const [showGlobalTour, setShowGlobalTour] = useState(false);
+  const [currentTourStep, setCurrentTourStep] = useState(0);
+
+  const globalTourSteps = [
+    {
+      title: "🌌 Welcome to Somnia — Subconscious Oracle",
+      text: "Somnia synchronization connects physical environments, sleep parameters, and waking focus challenges. Let's take a 60-second tour to master its capabilities!",
+    },
+    {
+      title: "📖 1. The Subconscious Feed & Journal Logs",
+      text: "Log daily dreams in the Journal, tag details, and search items. Tap 'Download Podcast Source Document' inside your Feed to export a high-density index format specifically formatted to co-host a podcast inside Google's free NotebookLM (notebooklm.google)!",
+    },
+    {
+      title: "🎙️ 2. Nocturnal Somniloquy Threshold Mic",
+      text: "The 'Sleep Mic' activates threshold listening when you fall asleep. Speak or dictate your waking thoughts half-awake; the mic registers the sound dynamically without recording silence.",
+    },
+    {
+      title: "🎬 3. Creative Video Studio (Your Editor)",
+      text: "Select any dream to open the timeline track. Fine-tune transition clips, refine art prompts (Anime/Noir or Cyberpunk), and expand the right-hand Chat sidebar to consult the Subconscious Guide.",
+    },
+    {
+      title: "🎧 4. Sleep-Learning loops & Binaural Beats",
+      text: "The 'Synth' tab features dual pathways: Play True Binaural Waves awake for focus/meditation. As you rest, load study courses (SAT vocabulary, French conversational keys, or custom textbooks) to whisper softly under Alpha waves.",
+    },
+    {
+      title: "🧭 5. Reality Check Coach & challenges",
+      text: "Under the 'Coach' tab, train your awake reflexes (e.g. thumb pressure tests, clock triggers). Doing reality tests awake helps your mind repeat these checks while asleep, inducing lucid dreaming!",
+    },
+    {
+      title: "📊 6. Bedrock correlations & analytics",
+      text: "Examine beautiful analytics correlation reports charts in the 'Analytics' tab. Track how physical bed parameters (home bed/nap context) or active life milestones correlate directly to REM states.",
+    }
+  ];
+
+  // Preload initial dreams from storage & trigger first onboarding tour
   useEffect(() => {
     setDreams(loadDreams());
+    
+    const hasCompletedTour = localStorage.getItem("somnia_global_tour_completed");
+    if (!hasCompletedTour) {
+      const timer = setTimeout(() => {
+        setShowGlobalTour(true);
+        localStorage.setItem("somnia_global_tour_completed", "true");
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const persistDreams = (updated: Dream[]) => {
@@ -271,12 +317,27 @@ export default function App() {
                 Somnia
               </h1>
             </div>
-            <button 
-              onClick={() => setCurrentTab("profile")}
-              className="text-on-surface-variant hover:text-tertiary p-2 rounded-full hover:bg-white/5 transition-all focus:outline-none"
-            >
-              <User className="w-5 h-5 text-secondary-fixed-dim" />
-            </button>
+            
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button 
+                onClick={() => {
+                  setShowGlobalTour(true);
+                  setCurrentTourStep(0);
+                }}
+                className="p-1 px-2 text-[#00dbe9] hover:text-white bg-[#00dbe9]/10 border border-[#00dbe9]/35 rounded-full transition-all focus:outline-none cursor-pointer flex items-center gap-1 text-[10px] uppercase font-bold font-mono shrink-0 mr-1 shadow-[0_0_8px_rgba(0,219,233,0.1)]"
+                title="Start Somnia App Walkthrough"
+              >
+                <HelpCircle className="w-3.5 h-3.5 animate-pulse" />
+                <span>Guide Tour</span>
+              </button>
+
+              <button 
+                onClick={() => setCurrentTab("profile")}
+                className="text-on-surface-variant hover:text-tertiary p-2 rounded-full hover:bg-white/5 transition-all focus:outline-none"
+              >
+                <User className="w-5 h-5 text-secondary-fixed-dim" />
+              </button>
+            </div>
           </header>
 
           {/* Active Router views */}
@@ -451,6 +512,83 @@ export default function App() {
           onProcessingCompleted={handleProcessingCompleted}
         />
       )}
+
+      {/* Global Tour Guide Dialogue Overlay */}
+      <AnimatePresence>
+        {showGlobalTour && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg bg-[#0e1121] border border-white/10 rounded-2xl p-6 shadow-[0_0_50px_rgba(202,158,255,0.15)] space-y-4 focus:outline-none relative"
+            >
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <span className="text-[10px] uppercase font-mono tracking-widest text-[#00dbe9] font-extrabold flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-[#00dbe9] animate-pulse" />
+                  Somnia Oracle Manual ({currentTourStep + 1}/{globalTourSteps.length})
+                </span>
+                <button
+                  onClick={() => setShowGlobalTour(false)}
+                  className="p-1 px-2 text-[10px] text-on-surface-variant hover:text-white rounded bg-white/5 hover:bg-white/10 transition-all uppercase tracking-wider font-mono cursor-pointer"
+                  title="Close Walkthrough"
+                >
+                  ✕ Skip
+                </button>
+              </div>
+
+              <div className="space-y-2 text-left">
+                <h3 className="font-display-lg text-lg text-[#ca9eff] font-bold tracking-wide">
+                  {globalTourSteps[currentTourStep].title}
+                </h3>
+                <p className="font-body-sm text-sm text-on-surface-variant/90 leading-relaxed">
+                  {globalTourSteps[currentTourStep].text}
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                <button
+                  disabled={currentTourStep === 0}
+                  onClick={() => setCurrentTourStep(prev => prev - 1)}
+                  className="px-4 py-1.5 text-xs text-on-surface-variant hover:text-white bg-white/5 disabled:opacity-20 disabled:cursor-not-allowed rounded-full transition-all uppercase font-semibold border-none cursor-pointer"
+                >
+                  ← Back
+                </button>
+                
+                <div className="flex gap-1">
+                  {globalTourSteps.map((_, idx) => (
+                    <div
+                      key={`global-dot-${idx}`}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        idx === currentTourStep ? "bg-[#00dbe9] scale-125" : "bg-white/15"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {currentTourStep < globalTourSteps.length - 1 ? (
+                  <button
+                    onClick={() => setCurrentTourStep(prev => prev + 1)}
+                    className="px-4 py-1.5 text-xs bg-gradient-to-r from-[#9efffc] to-[#ca9eff] text-[#0b0d1f] hover:brightness-110 rounded-full font-bold transition-all uppercase border-none cursor-pointer"
+                  >
+                    Next →
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowGlobalTour(false);
+                      setCurrentTourStep(0);
+                    }}
+                    className="px-4 py-1.5 text-xs bg-[#ca9eff]/20 hover:bg-[#ca9eff]/30 border border-[#ca9eff]/40 text-[#ca9eff] font-bold rounded-full transition-all uppercase cursor-pointer"
+                  >
+                    Finish Guide
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

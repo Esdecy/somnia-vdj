@@ -134,32 +134,32 @@ export default function AnalyticsView({ dreams, onNavigateToRecord }: AnalyticsV
       <div className="glass-panel p-5 rounded-2xl border border-white/5 space-y-3.5 bg-[#14162e]/40">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <h3 className="text-xs font-bold font-label-caps tracking-widest text-[#ca9eff] flex items-center gap-1.5 uppercase">
-              <Calendar className="w-4 h-4 text-secondary" /> Epoch Timeline Slicer
+            <h3 className="text-sm font-bold font-label-caps tracking-widest text-[#ca9eff] flex items-center gap-1.5 uppercase">
+              <Calendar className="w-5 h-5 text-secondary" /> Life Chapters Selector
             </h3>
-            <p className="text-[11px] text-on-surface-variant/80">
-              Filter your dynamic analytics by real-world life milestones to see how dream themes shift.
+            <p className="text-xs text-[#cac5e4]/90">
+              Filter your dynamic dream trends by major life chapters (e.g. college exams, new job, traveling) to see how themes shifting.
             </p>
           </div>
           <select
             value={selectedEpochFilter}
             onChange={(e) => setSelectedEpochFilter(e.target.value)}
-            className="bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-on-surface focus:border-secondary outline-none cursor-pointer max-w-xs shrink-0"
+            className="bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-on-surface focus:border-secondary outline-none cursor-pointer max-w-xs shrink-0"
           >
             {lifeEpochs.map(epoch => (
               <option key={epoch} value={epoch}>
-                {epoch === "All Epochs" ? "All Combined Lifespans" : `During: ${epoch}`}
+                {epoch === "All Epochs" ? "All Life Chapters Combined" : `Chapter: ${epoch}`}
               </option>
             ))}
           </select>
         </div>
 
         {/* Slicer quick insight banner */}
-        <div className="p-3 bg-black/20 rounded-xl border border-white/5 text-xs text-on-surface-variant leading-relaxed">
+        <div className="p-3 bg-black/20 rounded-xl border border-white/5 text-xs text-on-surface-variant/90 leading-relaxed">
           {selectedEpochFilter === "All Epochs" ? (
-            <span>Currently displaying subconscious patterns aggregated across <strong>all cataloged lifespans</strong>. Select an epoch to drill into a thematic time period.</span>
+            <span>Currently showing patterns aggregated across <strong>all cataloged lifespans and chapters</strong>. Select an entry to filter a specific time frame.</span>
           ) : (
-            <span>Isolating dreams recorded during <strong>{selectedEpochFilter}</strong> ({totalCount} sessions). You can compare how waking conditions shaped the dreamscape compared to other times.</span>
+            <span>Isolating dreams recorded during <strong>{selectedEpochFilter}</strong> ({totalCount} sessions). See how waking environments shaped your dreams compared to other life chapters.</span>
           )}
         </div>
       </div>
@@ -170,7 +170,7 @@ export default function AnalyticsView({ dreams, onNavigateToRecord }: AnalyticsV
         {/* Custom Cognitive Ratio progress bars */}
         <div className="glass-panel p-5 rounded-2xl border border-white/5 space-y-4">
           <h3 className="font-title-md text-xs tracking-widest uppercase font-bold text-on-surface border-b border-white/5 pb-2.5 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-[#ca9eff]" /> Cog Ratio distribution ({selectedEpochFilter})
+            <TrendingUp className="w-4 h-4 text-[#ca9eff]" /> Dream Theme & Awareness Distribution ({selectedEpochFilter})
           </h3>
 
           <div className="space-y-4 pt-1">

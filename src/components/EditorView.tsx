@@ -66,6 +66,33 @@ export default function EditorView({
   const [history, setHistory] = useState<Dream[]>([dream]);
   const [historyIdx, setHistoryIdx] = useState(0);
 
+  const [showStudioGuide, setShowStudioGuide] = useState(false);
+  const [currentGuideStep, setCurrentGuideStep] = useState(0);
+  const [showSubconsciousGuide, setShowSubconsciousGuide] = useState(true);
+
+  const guideSteps = [
+    {
+      title: "🎬 Welcome to the Somnia Creative Studio",
+      text: "This studio converts your recalled dreams into cinematic video drafts. Here you can tweak individual scenes, add mental layer overlays, or consult the Subconscious Interpreter.",
+    },
+    {
+      title: "⏱️ The Dream Timeline Scrubber",
+      text: "At the bottom of the workspace is the timeline track. Each block represents 1 second of your dream video. Tap any block or scrub the playhead to fine-tune exact transition frames!",
+    },
+    {
+      title: "🎨 Cinematic Art Styles & Prompts",
+      text: "Under GLOBAL STYLE, you can change the artistic filter of the dream (e.g. Noir, Anime/Ghibli, or Cyberpunk) instantly. Use the 'Refine Visual Prompt' input directly above it to type in precise visual guidance of what actually occurs in the scene, then press 'RENDER' to re-cook the clip with AI core logic.",
+    },
+    {
+      title: "🧭 Freeform Spatial Location & Mind Overlays",
+      text: "Type in any freeform physical setting in the 'DREAM LAYERS' parameters, and assign emotion overlays (like Melancholy, Serenity or Awe) to color the atmospheric lighting.",
+    },
+    {
+      title: "📖 AI Subconscious Interpreter Guide",
+      text: "Select a custom symbol or key question in the right-side chat and the counselor will guide you through interpreting the dream's hidden psychology based on your active Life Milestone chapters.",
+    }
+  ];
+
   const pushToHistory = (newDream: Dream) => {
     const updatedHistory = history.slice(0, historyIdx + 1);
     updatedHistory.push(newDream);
@@ -266,7 +293,19 @@ export default function EditorView({
         </div>
 
         {/* Undo, Redo, Render CTA */}
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-2 md:gap-3.5">
+          <button
+            onClick={() => {
+              setShowStudioGuide(true);
+              setCurrentGuideStep(0);
+            }}
+            className="p-1 px-2.5 md:p-2 text-[#00dbe9] hover:text-white bg-white/5 hover:bg-[#00dbe9]/10 border border-[#00dbe9]/30 rounded-full transition-all focus:outline-none cursor-pointer flex items-center gap-1 text-[10px] md:text-xs font-bold font-mono"
+            title="Start Studio Walkthrough"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Guide Tour</span>
+          </button>
+
           <button
             disabled={historyIdx === 0}
             onClick={handleUndo}
@@ -345,8 +384,8 @@ export default function EditorView({
                 <Palette className="w-3.5 h-3.5 text-tertiary" />
                 GLOBAL STYLE
               </span>
-              <div className="grid grid-cols-2 gap-1.5 flex-grow">
-                {["Synthwave", "Ghibli", "Noir", "Hyper-real"].map((sty) => {
+              <div className="grid grid-cols-2 gap-1.5 flex-grow overflow-y-auto max-h-[140px] pr-1 scrollbar-none">
+                {["Synthwave", "Ghibli", "Noir", "Hyper-real", "Oil Painting", "Cinematic", "Surrealism", "Cyberpunk"].map((sty) => {
                   const isSel = activeDream.visuals.style === sty;
                   return (
                     <button
@@ -366,26 +405,58 @@ export default function EditorView({
             </div>
 
             {/* Dream Layer overlays */}
-            <div className="glass-panel p-4 rounded-xl flex flex-col gap-2 border border-white/5 text-left">
-              <span className="font-label-caps text-[10px] tracking-wider text-on-surface-variant flex items-center gap-1 font-semibold">
-                <Layers className="w-3.5 h-3.5 text-primary" />
-                DREAM LAYERS
-              </span>
-              <div className="flex flex-col gap-1.5 mt-1 flex-grow justify-center">
-                <button
-                  onClick={() => injectDetailTag("emotion")}
-                  className="flex items-center gap-2 p-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-on-surface transition-colors cursor-pointer group"
-                >
-                  <Smile className="w-4 h-4 text-secondary group-hover:animate-bounce" />
-                  <span>Shift Emotion Overlay</span>
-                </button>
-                <button
-                  onClick={() => injectDetailTag("location")}
-                  className="flex items-center gap-2 p-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-on-surface transition-colors cursor-pointer group"
-                >
-                  <Compass className="w-4 h-4 text-tertiary group-hover:animate-spin" />
-                  <span>Shift Location Context</span>
-                </button>
+            <div className="glass-panel p-4 rounded-xl flex flex-col gap-2 border border-white/5 text-left transition-all">
+              <div className="flex justify-between items-center pb-1 border-b border-white/5">
+                <span className="font-label-caps text-[10px] tracking-wider text-on-surface-variant flex items-center gap-1 font-semibold">
+                  <Layers className="w-3.5 h-3.5 text-primary" />
+                  DREAM BIO-LAYERS
+                </span>
+              </div>
+              
+              <div className="flex flex-col gap-3 mt-1 flex-grow justify-center">
+                <div className="space-y-2.5 animate-fadeIn">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-mono text-tertiary tracking-wider font-extrabold uppercase block leading-none">
+                      Spatial Realm
+                    </span>
+                    <span className="text-xs text-on-surface font-medium truncate mt-1 flex items-center gap-1.5">
+                      <Compass className="w-3 h-3 text-tertiary shrink-0 animate-spin-slow" />
+                      {activeDream.details.spatialContext || "Infinite Void"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-mono text-secondary tracking-wider font-extrabold uppercase block leading-none">
+                      Atmospheric Emotion Accent
+                    </span>
+                    <span className="text-xs text-on-surface font-medium truncate mt-1 flex items-center gap-1.5">
+                      <Smile className="w-3 h-3 text-secondary shrink-0" />
+                      {activeDream.details.emotion || "Not specified"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-1 border-t border-white/5 pt-1.5 space-y-1">
+                    <div className="flex items-center justify-between text-[9px] font-mono text-on-surface-variant/80">
+                      <span>Physical Bed:</span>
+                      <span className="text-primary font-bold">{activeDream.sleepEnvironment || "Home Bed"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] font-mono text-on-surface-variant/80">
+                      <span>Milestone epoch:</span>
+                      <span className="text-[#ca9eff] font-bold truncate max-w-[120px]" title={activeDream.lifeEpoch}>
+                        {activeDream.lifeEpoch || "Ordinary Life"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-1.5 border-t border-white/5">
+                    <button
+                      onClick={onNavigateBack}
+                      className="w-full py-1.5 text-[9px] font-bold text-center bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20 rounded-md transition-all cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1"
+                    >
+                      ✏️ Edit Journal Parameters
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -393,30 +464,52 @@ export default function EditorView({
         </section>
 
         {/* Right column sidebar: Somnia Subconscious Interpreter Guide */}
-        <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-white/10 bg-[#0f1122]/95 flex flex-col h-full overflow-hidden shrink-0">
-          {/* Header block with statistics & metadata */}
-          <div className="p-4 border-b border-white/5 space-y-2 shrink-0 bg-black/15 text-left bg-gradient-to-tr from-[#ca9eff]/5 to-transparent">
-            <h3 className="text-xs font-bold font-label-caps tracking-widest text-[#ca9eff] flex items-center gap-1.5">
-              <MessageSquare className="w-4 h-4 text-[#ca9eff] shrink-0" /> Somnia Subconscious Guide
-            </h3>
-            <p className="text-[10px] text-on-surface-variant/80">
-              Correlate current mental patterns, waking milestones, and sensory environments to interpret REM dream structures.
-            </p>
+        {!showSubconsciousGuide ? (
+          <aside className="w-full lg:w-12 border-t lg:border-t-0 lg:border-l border-white/10 bg-[#0f1122]/95 flex lg:flex-col items-center justify-between p-2.5 lg:py-4 shrink-0 transition-all duration-300">
+            <button
+              onClick={() => setShowSubconsciousGuide(true)}
+              className="text-[#ca9eff] hover:text-white p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-all mx-auto cursor-pointer flex items-center lg:flex-col gap-2"
+              title="Expand Interpreter Panel"
+            >
+              <MessageSquare className="w-5 h-5 shadow" />
+              <span className="text-[9px] font-mono uppercase tracking-widest hidden lg:block select-none font-extrabold [writing-mode:vertical-lr] py-2">Consult Guide</span>
+            </button>
+          </aside>
+        ) : (
+          <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-white/10 bg-[#0f1122]/95 flex flex-col h-full overflow-hidden shrink-0 transition-all duration-300 relative">
+            {/* Header block with statistics & metadata */}
+            <div className="p-4 border-b border-white/5 space-y-2 shrink-0 bg-black/15 text-left bg-gradient-to-tr from-[#ca9eff]/5 to-transparent flex justify-between items-start gap-2 animate-fadeIn">
+              <div className="space-y-0.5 flex-1 min-w-0">
+                <h3 className="text-xs font-bold font-label-caps tracking-widest text-[#ca9eff] flex items-center gap-1.5 animate-pulse">
+                  <MessageSquare className="w-4 h-4 text-[#ca9eff] shrink-0" /> Somnia Subconscious Guide
+                </h3>
+                <p className="text-[10px] text-on-surface-variant/80">
+                  Correlate patterns to interpret REM dream structures.
+                </p>
 
-            {/* Bedrock correlations badges */}
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {activeDream.lifeEpoch && (
-                <span className="text-[9px] font-mono bg-[#ca9eff]/10 border border-[#ca9eff]/20 text-[#ca9eff] px-2 py-0.5 rounded">
-                  Milestone: {activeDream.lifeEpoch}
-                </span>
-              )}
-              {activeDream.sleepEnvironment && (
-                <span className="text-[9px] font-mono bg-[#00dbe9]/10 border border-[#00dbe9]/20 text-[#00dbe9] px-2 py-0.5 rounded">
-                  Bed: {activeDream.sleepEnvironment}
-                </span>
-              )}
+                {/* Bedrock correlations badges */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {activeDream.lifeEpoch && (
+                    <span className="text-[9px] font-mono bg-[#ca9eff]/10 border border-[#ca9eff]/20 text-[#ca9eff] px-2 py-0.5 rounded">
+                      Milestone: {activeDream.lifeEpoch}
+                    </span>
+                  )}
+                  {activeDream.sleepEnvironment && (
+                    <span className="text-[9px] font-mono bg-[#00dbe9]/10 border border-[#00dbe9]/20 text-[#00dbe9] px-2 py-0.5 rounded">
+                      Bed: {activeDream.sleepEnvironment}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowSubconsciousGuide(false)}
+                className="p-1 px-2 text-[9px] text-[#ca9eff] hover:text-white bg-[#ca9eff]/10 hover:bg-[#ca9eff]/20 border border-[#ca9eff]/20 rounded-md transition-all cursor-pointer font-bold shrink-0 uppercase tracking-wide"
+                title="Collapse Sidebar"
+              >
+                ✕ Hide
+              </button>
             </div>
-          </div>
 
           <div className="flex-grow overflow-y-auto p-4 space-y-4 scrollbar-thin">
             {/* Main interpretation wrapper */}
@@ -539,6 +632,7 @@ export default function EditorView({
             </div>
           </div>
         </aside>
+      )}
       </main>
 
       {/* Bottom Timeline Section (As per design Screen 4) */}
@@ -732,6 +826,81 @@ export default function EditorView({
         </div>
 
       </section>
+
+      {/* Studio Walkthrough Interactive Overlay */}
+      <AnimatePresence>
+        {showStudioGuide && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-[#121424] border border-[#ca9eff]/30 shadow-2xl p-6 rounded-2xl max-w-md w-full text-left space-y-4 relative"
+            >
+              <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#ca9eff] font-extrabold">
+                  Interactive Tour — Step {currentGuideStep + 1} of {guideSteps.length}
+                </span>
+                <button
+                  onClick={() => setShowStudioGuide(false)}
+                  className="text-on-surface-variant hover:text-white transition-all text-sm font-bold bg-white/5 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-black tracking-wider text-white font-label-caps uppercase">
+                  {guideSteps[currentGuideStep].title}
+                </h4>
+                <p className="text-xs text-[#cac5e4] leading-relaxed">
+                  {guideSteps[currentGuideStep].text}
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={() => setShowStudioGuide(false)}
+                  className="text-xs text-on-surface-variant hover:text-white transition-colors cursor-pointer font-semibold"
+                >
+                  Skip Tour
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {currentGuideStep > 0 && (
+                    <button
+                      onClick={() => setCurrentGuideStep(prev => prev - 1)}
+                      className="px-3 py-1.5 bg-white/5 border border-white/5 text-on-surface hover:text-white text-xs rounded-lg transition-colors cursor-pointer"
+                    >
+                      Back
+                    </button>
+                  )}
+                  {currentGuideStep < guideSteps.length - 1 ? (
+                    <button
+                      onClick={() => setCurrentGuideStep(prev => prev + 1)}
+                      className="px-4 py-1.5 bg-gradient-to-tr from-[#9efffc] to-[#ca9eff] text-[#05060f] font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                    >
+                      Next step
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowStudioGuide(false)}
+                      className="px-4 py-1.5 bg-secondary text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                    >
+                      Got it, thanks!
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

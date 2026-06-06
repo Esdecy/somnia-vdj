@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Brain, Sparkles, CheckSquare, Eye, ShieldAlert, Award, Clock } from "lucide-react";
+import { Brain, Sparkles, CheckSquare, Eye, ShieldAlert, Award, Clock, HelpCircle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function CoachView() {
@@ -176,14 +176,45 @@ export default function CoachView() {
     <div className="w-full flex flex-col pt-4 pb-24 px-4 max-w-4xl mx-auto space-y-6">
       
       {/* Title block */}
-      <div className="text-left">
-        <h2 className="text-xl font-bold tracking-widest text-[#ca9eff] font-label-caps uppercase flex items-center gap-2">
-          <Brain className="w-5 h-5 animate-pulse text-[#ca9eff]" />
-          SOMNIA INDUCTION COACH
-        </h2>
-        <p className="text-xs text-on-surface-variant/80 mt-1">
-          Harness neurological cues, cognitive anchors, and proven subconscious exercises to boost dream control ratio and recall depth.
-        </p>
+      <div className="text-left space-y-3">
+        <div>
+          <h2 className="text-2xl font-black tracking-wider text-[#ca9eff] font-label-caps uppercase flex items-center gap-2">
+            <Brain className="w-6 h-6 animate-pulse text-[#ca9eff]" />
+            AI Sleep & Dream Coach
+          </h2>
+          <p className="text-sm text-[#cac5e4] mt-1">
+            Build your mental memory muscles. Use tested exercises and daily training guides to raise your dream awareness, memory recall, and control.
+          </p>
+        </div>
+
+        {/* Expandable explanations dropdown */}
+        <details className="group border border-white/10 bg-black/40 rounded-xl overflow-hidden transition-all text-sm">
+          <summary className="px-4 py-3 font-semibold text-secondary hover:bg-white/5 cursor-pointer flex justify-between items-center select-none">
+            <span className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#ca9eff]">
+              <HelpCircle className="w-4 h-4 text-[#ca9eff]" /> 💡 Dream Training Quick Guide (Tap for tips)
+            </span>
+            <span className="text-xs text-on-surface-variant group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div className="p-4 border-t border-white/5 space-y-3 bg-black/60 text-xs text-on-surface-variant/90 leading-relaxed">
+            <p>
+              Your subconscious mind can be trained just like physical coordination. This coach provides:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div className="p-2.5 bg-white/5 rounded-lg border border-white/5 space-y-1">
+                <span className="font-bold text-secondary font-mono tracking-wide uppercase text-[10px]">1. Daily Checklists</span>
+                <p className="text-[11px] text-on-surface-variant/80">
+                  Quick habits (like physical reality checks) that train your waking brain to question assumptions. When this habit carries over into sleep, you immediately realize you are dreaming!
+                </p>
+              </div>
+              <div className="p-2.5 bg-white/5 rounded-lg border border-white/5 space-y-1">
+                <span className="font-bold text-[#00dbe9] font-mono tracking-wide uppercase text-[10px]">2. Guided Training Programs</span>
+                <p className="text-[11px] text-on-surface-variant/80">
+                  Step-by-step methods like MILD and WBTB. These are clinically tested techniques used by sleep academies to increase the vividness of dreams on demand.
+                </p>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
 
       {/* Grid: Checklists and Live reality check anchor */}
@@ -191,11 +222,11 @@ export default function CoachView() {
         
         {/* Lucid recall checked tracker */}
         <div className="glass-panel p-5 rounded-2xl border border-white/5 text-left space-y-4">
-          <h3 className="text-xs font-bold font-label-caps tracking-widest text-secondary flex items-center gap-2 border-b border-white/5 pb-2">
-            <CheckSquare className="w-4 h-4 text-secondary" /> Daily Induction Tasks
+          <h3 className="text-sm font-bold font-label-caps tracking-widest text-secondary flex items-center gap-2 border-b border-white/5 pb-2">
+            <CheckSquare className="w-4.5 h-4.5 text-secondary" /> Daily Dream Training Checklist
           </h3>
-          <p className="text-[11px] text-on-surface-variant/70 leading-normal">
-            Complete these exercises daily to tune your brain's retrospection mechanics for REM sleep recall.
+          <p className="text-xs text-on-surface-variant/80 leading-normal">
+            Tick off these habits daily to tune your brain's natural memory and awareness triggers ready for sleep:
           </p>
 
           <div className="space-y-3 pt-1">
